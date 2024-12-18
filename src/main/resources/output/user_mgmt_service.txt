@@ -1,0 +1,169 @@
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\ums\controller\UserController.java ###
+package com.jh.ums.controller;
+
+
+import com.jh.ums.model.User;
+import com.jh.ums.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    @PostMapping("/register")
+    public User registerUser(@RequestBody User user) {
+        return userService.registerUser(user);
+    }
+
+    @GetMapping("/{id}")
+    public User getUserById(@PathVariable String id) {
+        return userService.getUserById(id);
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\ums\model\User.java ###
+package com.jh.ums.model;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.Date;
+
+@Document(collection = "users")
+public class User {
+
+    @Id
+    private String id;                  // Unique user ID
+    private String username;            // Unique username for login
+    private String passwordHash;        // Hashed password for authentication
+    private String email;               // User's email address
+    private String firstName;           // First name of the user
+    private String lastName;            // Last name of the user
+    private String status;              // Status of the user (ACTIVE, INACTIVE)
+    private String departmentId;        // Reference to the department the user belongs to (Many-to-One)
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(String departmentId) {
+        this.departmentId = departmentId;
+    }
+}
+
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\ums\registry\UserRepository.java ###
+package com.jh.ums.registry;
+
+
+import com.jh.ums.model.User;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+public interface UserRepository extends MongoRepository<User, String> {
+    User findByUsername(String username);
+    User findByEmail(String email);
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\ums\service\UserService.java ###
+package com.jh.ums.service;
+
+
+import com.jh.ums.model.User;
+import com.jh.ums.registry.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+
+    @Autowired
+    private com.jh.ums.registry.UserRepository userRepository;
+
+    public com.jh.ums.model.User registerUser(User user) {
+        return userRepository.save(user);
+    }
+
+    public User getUserById(String id) {
+        return userRepository.findById(id).orElse(null);
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\ums\UserMgmtServiceApplication.java ###
+package com.jh.ums;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class UserMgmtServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(UserMgmtServiceApplication.class, args);
+	}
+
+}
+
+spring.application.name=user-mgmt-service
+server.port=8081
+spring.data.mongodb.uri=mongodb://localhost:27017/usermgmtdb
+#spring.data.mongodb.database=usersdb

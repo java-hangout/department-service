@@ -1,0 +1,168 @@
+### Contents of D:\OSBI\workspace\task-mgmt-service\src\main\java\com\jh\tms\controller\TaskController.java ###
+package com.jh.tms.controller;
+
+
+import com.jh.tms.model.Task;
+import com.jh.tms.service.TaskService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/tasks")
+public class TaskController {
+
+    @Autowired
+    private TaskService taskService;
+
+    @PostMapping
+    public Task createTask(@RequestBody Task task) {
+        return taskService.createTask(task);
+    }
+
+    @GetMapping("/{id}")
+    public Task getTaskById(@PathVariable String id) {
+        return taskService.getTaskById(id);
+    }
+}
+
+### Contents of D:\OSBI\workspace\task-mgmt-service\src\main\java\com\jh\tms\model\Task.java ###
+package com.jh.tms.model;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.Date;
+
+@Document(collection = "tasks")
+public class Task {
+
+    @Id
+    private String id;                     // Unique task ID
+    private String title;                  // Task title
+    private String description;            // Task description
+    private String assignedToUserId;       // Reference to the user who is assigned the task (Many-to-One)
+    private String departmentId;           // Reference to the department the task belongs to (Many-to-One)
+    private Date dueDate = new Date();                  // Due date for the task
+    private String status;                 // Status of the task (e.g., "Open", "In Progress", "Completed")
+    private String priority;               // Priority of the task (e.g., "High", "Medium", "Low")
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+   /* public void setDescription(String description) {
+        this.description = description;
+    }*/
+
+    public String getAssignedToUserId() {
+        return assignedToUserId;
+    }
+
+    public void setAssignedToUserId(String assignedToUserId) {
+        this.assignedToUserId = assignedToUserId;
+    }
+
+    public String getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(String departmentId) {
+        this.departmentId = departmentId;
+    }
+
+    public Date getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(Date dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+}
+
+
+### Contents of D:\OSBI\workspace\task-mgmt-service\src\main\java\com\jh\tms\registry\TaskRepository.java ###
+package com.jh.tms.registry;
+
+
+import com.jh.tms.model.Task;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+public interface TaskRepository extends MongoRepository<Task, String> {
+    Task findByAssignedToUserId(String userId);
+}
+
+### Contents of D:\OSBI\workspace\task-mgmt-service\src\main\java\com\jh\tms\service\TaskService.java ###
+package com.jh.tms.service;
+
+
+import com.jh.tms.model.Task;
+import com.jh.tms.registry.TaskRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class TaskService {
+
+    @Autowired
+    private TaskRepository taskRepository;
+
+    public Task createTask(Task task) {
+        return taskRepository.save(task);
+    }
+
+    public Task getTaskById(String id) {
+        return taskRepository.findById(id).orElse(null);
+    }
+}
+
+### Contents of D:\OSBI\workspace\task-mgmt-service\src\main\java\com\jh\tms\TaskMgmtServiceApplication.java ###
+package com.jh.tms;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class TaskMgmtServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(TaskMgmtServiceApplication.class, args);
+	}
+
+}
+
+spring.application.name=task-mgmt-service
+server.port=8083
+spring.data.mongodb.uri=mongodb://localhost:27017/taskmgmtdb
+

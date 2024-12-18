@@ -1,0 +1,219 @@
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\controller\DepartmentController.java ###
+package com.jh.ds.controller;
+
+
+import com.jh.ds.model.Department;
+import com.jh.ds.service.DepartmentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/departments")
+public class DepartmentController {
+
+    @Autowired
+    private DepartmentService departmentService;
+
+    @PostMapping("/create")
+    public Department createDepartment(@RequestBody Department department) {
+        return departmentService.createDepartment(department);
+    }
+
+    @GetMapping("/{id}")
+    public Department getDepartmentById(@PathVariable String id) {
+        return departmentService.getDepartmentById(id);
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\DepartmentServiceApplication.java ###
+package com.jh.ds;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DepartmentServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(DepartmentServiceApplication.class, args);
+	}
+
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\model\Department.java ###
+package com.jh.ds.model;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.List;
+
+@Document(collection = "departments")
+public class Department {
+
+    @Id
+    private String id;                     // Unique department ID
+    private String name;                   // Name of the department
+    private String description;            // Description of the department
+    private String managerId;              // Reference to the manager (One-to-One, Manager of the department)
+    private List<String> userIds;          // List of user IDs who are part of the department (Many-to-One)
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getManagerId() {
+        return managerId;
+    }
+
+    public void setManagerId(String managerId) {
+        this.managerId = managerId;
+    }
+
+    public List<String> getUserIds() {
+        return userIds;
+    }
+
+    public void setUserIds(List<String> userIds) {
+        this.userIds = userIds;
+    }
+}
+
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\registry\DepartmentRepository.java ###
+package com.jh.ds.registry;
+
+
+import com.jh.ds.model.Department;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+public interface DepartmentRepository extends MongoRepository<Department, String> {
+    Department findByName(String name);
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\service\DepartmentService.java ###
+package com.jh.ds.service;
+
+
+import com.jh.ds.model.Department;
+import com.jh.ds.registry.DepartmentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DepartmentService {
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
+    public Department createDepartment(Department department) {
+        return departmentRepository.save(department);
+    }
+
+    public Department getDepartmentById(String id) {
+        return departmentRepository.findById(id).orElse(null);
+    }
+}
+
+spring.application.name=department-service
+server.port=8082
+spring.data.mongodb.uri=mongodb://localhost:27017/departmentdb
+
+===========================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.4.0</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.jh.ds</groupId>
+	<artifactId>department-service</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>department-service</name>
+	<description>department Service</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>21</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-mongodb</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-mongodb-reactive</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>io.projectreactor</groupId>
+			<artifactId>reactor-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
