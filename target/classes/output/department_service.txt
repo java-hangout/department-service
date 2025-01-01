@@ -1,37 +1,154 @@
-### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\controller\DepartmentController.java ###
-package com.jh.ds.controller;
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\config\SecurityConfig.java ###
+package com.jh.tds.ds.config;
+
+import com.jh.tds.ds.util.JwtAuthenticationFilter;
+import com.jh.tds.ds.util.JwtUtil;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 
-import com.jh.ds.model.Department;
-import com.jh.ds.service.DepartmentService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
 
-@RestController
-@RequestMapping("/departments")
-public class DepartmentController {
+    private final JwtUtil jwtUtil;
 
-    @Autowired
-    private DepartmentService departmentService;
-
-    @PostMapping("/create")
-    public Department createDepartment(@RequestBody Department department) {
-        return departmentService.createDepartment(department);
+    public SecurityConfig(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
     }
 
-    @GetMapping("/{id}")
-    public Department getDepartmentById(@PathVariable String id) {
-        return departmentService.getDepartmentById(id);
+    // Bean for Password Encoder
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // AuthenticationManager bean for authentication
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        return http.getSharedObject(AuthenticationManagerBuilder.class).build();
+    }
+
+    // HTTP security configuration to secure endpoints
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)  // Disable CSRF explicitly in Spring Security 6.x
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/api/departments/**").permitAll() // Allow access to authentication routes
+                        .anyRequest().authenticated() // All other requests must be authenticated
+                )
+                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class); // Adding JWT filter before UsernamePasswordAuthenticationFilter
+
+        return http.build();
     }
 }
 
-### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\DepartmentServiceApplication.java ###
-package com.jh.ds;
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\config\SwaggerConfig.java ###
+package com.jh.tds.ds.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SwaggerConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Department Service API")
+                        .version("1.0")
+                        .description("API documentation for the Department service"));
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\controller\DepartmentController.java ###
+package com.jh.tds.ds.controller;
+
+import com.jh.tds.ds.model.Department;
+import com.jh.tds.ds.service.DepartmentServiceImpl;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/departments")
+@Tag(name = "Department Management", description = "Endpoints for managing departments")
+public class DepartmentController {
+
+    @Autowired
+    private DepartmentServiceImpl departmentService;
+
+    // Create a new department
+    @PostMapping("/create")
+    public ResponseEntity<Department> createDepartment(@RequestBody Department department) {
+        Department savedDepartment = departmentService.createDepartment(department);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedDepartment);
+    }
+
+    // Get all departments
+    @GetMapping("/fetch/all")
+    public ResponseEntity<List<Department>> getAllDepartments() {
+        List<Department> departments = departmentService.getAllDepartments();
+        return ResponseEntity.ok(departments);
+    }
+
+    // Get a department by ID
+    @GetMapping("/fetch/id/{id}")
+    public ResponseEntity<Department> getDepartmentById(@PathVariable String id) {
+        Department department = departmentService.getDepartmentById(id);
+        return ResponseEntity.ok(department);
+    }
+    // Get a department by ID
+    @GetMapping("/fetch/name/{departmentName}")
+    public ResponseEntity<Department> getDepartmentByName(@PathVariable String departmentName) {
+        Department department = departmentService.getDepartmentByName(departmentName);
+        return ResponseEntity.ok(department);
+    }
+
+    // Update a department by ID
+    @PutMapping("/update/{id}")
+    public ResponseEntity<Department> updateDepartment(@PathVariable String id, @RequestBody Department department) {
+            System.out.println("request received id "+id +" department "+department);
+            Department updatedDepartment = departmentService.updateDepartment(id, department);
+            return ResponseEntity.ok(updatedDepartment);
+
+    }
+
+    // Delete a department by ID
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteDepartment(@PathVariable String id) {
+        departmentService.deleteDepartment(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\DepartmentServiceApplication.java ###
+package com.jh.tds.ds;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
+@ComponentScan("com.jh.tds.ds")
 public class DepartmentServiceApplication {
 
 	public static void main(String[] args) {
@@ -40,180 +157,598 @@ public class DepartmentServiceApplication {
 
 }
 
-### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\model\Department.java ###
-package com.jh.ds.model;
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\exception\DepartmentNotFoundException.java ###
+package com.jh.tds.ds.exception;
 
+public class DepartmentNotFoundException extends RuntimeException {
+
+    public DepartmentNotFoundException(String id) {
+        super("Department " + id + " not found");
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\exception\DuplicateDepartmentNameException.java ###
+package com.jh.tds.ds.exception;
+
+public class DuplicateDepartmentNameException extends RuntimeException {
+
+    public DuplicateDepartmentNameException(String departmentName) {
+        super("Department with name '" + departmentName + "' already exists.");
+    }
+}
+
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\exception\ErrorResponse.java ###
+package com.jh.tds.ds.exception;
+
+public class ErrorResponse {
+    private String message;
+    private int status;
+
+    // Constructor
+    public ErrorResponse(String message, int status) {
+        this.message = message;
+        this.status = status;
+    }
+
+    // Getters and setters
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\exception\GlobalExceptionHandler.java ###
+package com.jh.tds.ds.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    // Handle DuplicateDepartmentNameException
+    @ExceptionHandler(DuplicateDepartmentNameException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateDepartmentName(DuplicateDepartmentNameException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+    @ExceptionHandler(DepartmentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDepartmentNotFound(DepartmentNotFoundException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    // Handle other exceptions
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        // Handle any other generic exceptions
+        ErrorResponse errorResponse = new ErrorResponse("An unexpected error occurred.", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\model\Department.java ###
+package com.jh.tds.ds.model;
+
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
 
+@Setter
+@Getter
 @Document(collection = "departments")
 public class Department {
 
     @Id
     private String id;                     // Unique department ID
-    private String name;                   // Name of the department
+    @Indexed(unique = true)
+    private String departmentName;                   // Name of the department
     private String description;            // Description of the department
     private String managerId;              // Reference to the manager (One-to-One, Manager of the department)
     private List<String> userIds;          // List of user IDs who are part of the department (Many-to-One)
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getManagerId() {
-        return managerId;
-    }
-
-    public void setManagerId(String managerId) {
-        this.managerId = managerId;
-    }
-
-    public List<String> getUserIds() {
-        return userIds;
-    }
-
-    public void setUserIds(List<String> userIds) {
-        this.userIds = userIds;
-    }
 }
 
 
-### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\registry\DepartmentRepository.java ###
-package com.jh.ds.registry;
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\model\Sequence.java ###
+package com.jh.tds.ds.model;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Getter
+@Setter
+@Document(collection = "sequences")
+public class Sequence {
+
+    @Id
+    private String id;        // This will be used to uniquely identify the sequence
+    private int seqValue;     // Stores the current sequence value (e.g., 1, 2, 3, ...)
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\registry\DepartmentRepository.java ###
+package com.jh.tds.ds.registry;
 
 
-import com.jh.ds.model.Department;
+import com.jh.tds.ds.model.Department;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.Optional;
+
 public interface DepartmentRepository extends MongoRepository<Department, String> {
-    Department findByName(String name);
+    Optional<Department> findByDepartmentName(String departmentName);
+
+    // Custom query to check if a department with a name already exists
+    boolean existsByDepartmentName(String departmentName);
+
 }
 
-### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\ds\service\DepartmentService.java ###
-package com.jh.ds.service;
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\registry\SequenceRepository.java ###
+package com.jh.tds.ds.registry;
 
+import com.jh.tds.ds.model.Sequence;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
 
-import com.jh.ds.model.Department;
-import com.jh.ds.registry.DepartmentRepository;
+@Repository
+public interface SequenceRepository extends MongoRepository<Sequence, String> {
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\service\DepartmentService.java ###
+package com.jh.tds.ds.service;
+
+import com.jh.tds.ds.model.Department;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * @author Veeresh N
+ * @version 1.0
+ */
+public interface DepartmentService {
+    public Department createDepartment(Department department);
+
+    public List<Department> getAllDepartments();
+
+    public Department getDepartmentById(String id);
+    public Department getDepartmentByName(String name);
+
+    public Department updateDepartment(String id, Department department);
+
+    public void deleteDepartment(String id);
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\service\DepartmentServiceImpl.java ###
+package com.jh.tds.ds.service;
+
+import com.jh.tds.ds.exception.DepartmentNotFoundException;
+import com.jh.tds.ds.exception.DuplicateDepartmentNameException;
+import com.jh.tds.ds.model.Department;
+import com.jh.tds.ds.registry.DepartmentRepository;
+import com.mongodb.DuplicateKeyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
+
 @Service
-public class DepartmentService {
+public class DepartmentServiceImpl implements DepartmentService {
 
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private SequenceGeneratorService sequenceService;  // Inject SequenceService
+
+
+    // Method to create a new department
+    @Override
     public Department createDepartment(Department department) {
-        return departmentRepository.save(department);
+        try {
+            // Check if department with the same name already exists
+            if (departmentRepository.existsByDepartmentName(department.getDepartmentName())) {
+                throw new DuplicateDepartmentNameException(department.getDepartmentName());
+            }
+            // Generate a new department ID using the sequence service
+            String departmentId = sequenceService.generateDepartmentId();
+            department.setId(departmentId);
+//            return departmentRepository.save(department);
+            // Attempt to save the department with the given departmentName
+            return departmentRepository.save(department);
+        } catch (DuplicateKeyException e) {
+            // Handle the duplicate departmentName error
+            throw new IllegalArgumentException("Department name already exists. Please choose a different name.");
+        }
+
     }
 
+    // Method to get all departments
+    @Override
+    public List<Department> getAllDepartments() {
+        return departmentRepository.findAll();
+    }
+
+    // Method to get a department by ID
+    @Override
     public Department getDepartmentById(String id) {
-        return departmentRepository.findById(id).orElse(null);
+        Optional<Department> department = departmentRepository.findById(id);
+        if (department.isPresent()) {
+            return department.get();
+        } else {
+            throw new DepartmentNotFoundException(id);
+        }
+    }
+
+    @Override
+    public Department getDepartmentByName(String departmentName) {
+        Optional<Department> department = departmentRepository.findByDepartmentName(departmentName);
+        if (department.isPresent()) {
+            return department.get();
+        } else {
+            throw new DepartmentNotFoundException(departmentName);
+        }
+    }
+
+    // Method to update a department by ID
+    @Override
+    public Department updateDepartment(String id, Department department) {
+        if (departmentRepository.existsById(id)) {
+            department.setId(id);
+            return departmentRepository.save(department);
+        } else {
+            throw new DepartmentNotFoundException(id);
+        }
+    }
+
+    // Method to delete a department by ID
+    @Override
+    public void deleteDepartment(String id) {
+        if (departmentRepository.existsById(id)) {
+            departmentRepository.deleteById(id);
+        } else {
+            throw new DepartmentNotFoundException(id);
+        }
     }
 }
 
-spring.application.name=department-service
-server.port=8082
-spring.data.mongodb.uri=mongodb://localhost:27017/departmentdb
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\service\SequenceGeneratorService.java ###
+package com.jh.tds.ds.service;
 
-===========================
 
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.4.0</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>com.jh.ds</groupId>
-	<artifactId>department-service</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>department-service</name>
-	<description>department Service</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-	<properties>
-		<java.version>21</java.version>
-	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-mongodb</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-mongodb-reactive</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webflux</artifactId>
-		</dependency>
+import com.jh.tds.ds.model.Sequence;
+import com.jh.tds.ds.registry.SequenceRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>io.projectreactor</groupId>
-			<artifactId>reactor-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
+@Service
+public class SequenceGeneratorService {
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
+    @Autowired
+    private SequenceRepository sequenceRepository;
 
-</project>
+    private static final String SEQUENCE_NAME = "department_seq";
+
+    public String generateDepartmentId() {
+        // Retrieve the current sequence or create a new one if it doesn't exist
+        Sequence sequence = sequenceRepository.findById(SEQUENCE_NAME)
+                .orElseGet(this::createNewSequence);
+
+        // Generate the user ID based on the current sequence
+        int currentSeq = sequence.getSeqValue();
+
+        // Generate the user ID (starting from user_001, user_002, etc.)
+        String generatedId = String.format("dept_%03d", currentSeq);
+
+        // Increment the sequence counter for future users
+        sequence.setSeqValue(currentSeq + 1);
+
+        // Save the updated sequence value to the database
+        sequenceRepository.save(sequence);
+
+        // Return the generated user ID
+        return generatedId;
+    }
+
+    private Sequence createNewSequence() {
+        Sequence sequence = new Sequence();
+        sequence.setId(SEQUENCE_NAME);
+        sequence.setSeqValue(1);  // Start from user_001
+        return sequenceRepository.save(sequence);
+    }
+}
+
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\util\JavaFilesToTextWithSubfolders.java ###
+package com.jh.tds.ds.util;
+
+import java.io.*;
+
+public class JavaFilesToTextWithSubfolders {
+    public static void main(String[] args) {
+        fileWriter(args);
+    }
+    public static void fileWriter(String[] args) {
+        // Folder containing .java files (can include subfolders)
+        String folderPath = "D:\\OSBI\\workspace\\department-service\\src\\main\\java\\com\\jh\\tds\\ds";  // Change this to the folder path containing .java files
+        
+        // Output file where the content of all .java files will be written
+        String outputFile = "D:\\OSBI\\workspace\\department-service\\src\\main\\resources\\output\\department_service.txt";  // Change this to your desired output file
+        
+        try {
+            writeJavaFilesFromSubfoldersToSingleFile(folderPath, outputFile);
+            System.out.println("Java files have been successfully written to " + outputFile);
+        } catch (IOException e) {
+            System.out.println("An error occurred: " + e.getMessage());
+        }
+    }
+
+    public static void writeJavaFilesFromSubfoldersToSingleFile(String folderPath, String outputFile) throws IOException {
+        // Create a BufferedWriter to write to the output file
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+
+        // Start recursion to process files in the directory and subdirectories
+        processDirectory(new File(folderPath), writer);
+
+        // Close the BufferedWriter to finalize writing to the output file
+        writer.close();
+    }
+
+    // Recursively processes all .java files in the directory and subdirectories
+    private static void processDirectory(File folder, BufferedWriter writer) throws IOException {
+        // List all files and subdirectories in the current folder
+        File[] files = folder.listFiles();
+        
+        if (files == null) {
+            System.out.println("Error accessing the folder: " + folder.getPath());
+            return;
+        }
+
+        // Process each file/subdirectory
+        for (File file : files) {
+            if (file.isDirectory()) {
+                // If it's a directory, recurse into it
+                processDirectory(file, writer);
+            } else if (file.isFile() && file.getName().endsWith(".java")) {
+                // If it's a .java file, process it
+                processJavaFile(file, writer);
+            }
+        }
+    }
+
+    // Process a single .java file
+    private static void processJavaFile(File javaFile, BufferedWriter writer) throws IOException {
+        BufferedReader reader = null;
+        try {
+            // Create a BufferedReader to read the content of the .java file
+            reader = new BufferedReader(new FileReader(javaFile));
+            String line;
+
+            // Write the file name as a header (optional)
+            writer.write("### Contents of " + javaFile.getPath() + " ###");
+            writer.newLine();
+            
+            // Write the content of the .java file into the output file
+            while ((line = reader.readLine()) != null) {
+                writer.write(line);
+                writer.newLine();
+            }
+
+            writer.newLine(); // Adds an extra newline between files
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + javaFile.getPath());
+            throw e; // Rethrow the exception to stop further execution
+        } finally {
+            // Close the BufferedReader after processing the current file
+            if (reader != null) {
+                reader.close();
+            }
+        }
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\util\JwtAuthenticationFilter.java ###
+package com.jh.tds.ds.util;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+        System.out.println("user service ===>>>> Processing request for path: " + path);
+
+
+        /*String token = request.getHeader("Authorization");
+        System.out.println("token --->>> " + token);
+        if (token != null && token.startsWith("Bearer ")) {
+            System.out.println("token --->>> 222 " + token);
+//            token = token.substring(7); // Remove "Bearer " prefix
+            token = token.split(" ")[1].trim();*/
+        String token = extractToken(request);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // Unauthorized response for invalid token
+            response.getWriter().write("Invalid or missing token");
+            return;
+        }
+//        if (token != null && jwtUtil.validateToken(token)) {
+        String username = jwtUtil.extractUsername(token);
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            var authentication = new UsernamePasswordAuthenticationToken(username, null, jwtUtil.extractRoles(token));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+            /*String[] roles = jwtUtil.extractRoles(token);  // Extract roles from the token
+
+//            if (username != null && jwtUtil.validateToken(token, username)) {
+//            if (token != null && jwtUtil.validateToken(token)) {
+                // Create authentication token and set it in SecurityContext
+                *//*UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        username, null, new ArrayList<>()
+                );*//*
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        username, null, jwtUtil.getAuthoritiesFromRoles(roles)
+                );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);*/
+//        }
+//        }
+
+        filterChain.doFilter(request, response);  // Proceed to the next filter in the chain
+    }
+
+    // Extract token from Authorization header
+    private String extractToken(HttpServletRequest request) {
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (header != null && header.startsWith("Bearer ")) {
+//            return header.substring(7);  // Remove "Bearer " prefix
+//            return header.substring(7).trim();
+            return header.split(" ")[1].trim();
+        }
+        return null;
+    }
+}
+
+### Contents of D:\OSBI\workspace\department-service\src\main\java\com\jh\tds\ds\util\JwtUtil.java ###
+package com.jh.tds.ds.util;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Component;
+
+import java.security.Key;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Component
+public class JwtUtil {
+    //    @Value("${jwt.secret}")
+    private String SECRET_KEY = "sh2+3JRuzIaVMCGxBPeDMSzUFwDBLscv4R77LYntGns=";
+    private Key secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(SECRET_KEY));
+    // Secure key for HS256 algorithm using JJWT's Keys utility (recommended approach)
+//    private Key secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256); // Generates a secure key for HS256
+//private Key secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+    private long expirationTime = 1000 * 60 * 60; // 1 hour in milliseconds
+
+    // Generate a JWT token with the given username
+    public String generateToken(String username, List<SimpleGrantedAuthority> authorities) {
+        System.out.println("generateToken --->>> " + username);
+//        System.out.println("SECRET_KEY --->>> " + SECRET_KEY);
+        System.out.println("secretKey --->>> " + secretKey);
+        Claims claims = Jwts.claims().setSubject(username);
+        claims.put("roles", authorities.stream().map(SimpleGrantedAuthority::getAuthority).collect(Collectors.toList()));
+        return Jwts.builder()
+                .setClaims(claims)
+//                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(secretKey)  // Use the generated secure key to sign the token
+                .compact();
+    }
+
+
+    // Extract the username (subject) from the JWT token
+    public String extractUsername(String token) {
+        return extractClaims(token).getSubject(); // The subject is typically the username
+    }
+
+    /*public String[] extractRoles(String token) {
+        Claims claims = extractClaims(token);
+        List<String> roles = (List<String>) claims.get("roles");
+        return roles.toArray(new String[0]);
+    }*/
+    public List<SimpleGrantedAuthority> extractRoles(String token) {
+        Claims claims = extractClaims(token);
+        List<String> roles = (List<String>) claims.get("roles");
+        return roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+    }
+
+    // Check if the token is expired
+    public boolean isTokenExpired(String token) {
+        return extractClaims(token).getExpiration().before(new Date());  // Compare token expiration with current time
+    }
+
+    /*// Validate the JWT token by comparing username and expiration status
+    public boolean validateToken(String token, String username) {
+        return (username.equals(extractUsername(token)) && !isTokenExpired(token));  // Ensure the username matches and token isn't expired
+    }*/
+    public List<SimpleGrantedAuthority> getAuthoritiesFromRoles(String[] roles) {
+        return Arrays.stream(roles)
+                .map(role -> new SimpleGrantedAuthority(role))
+                .collect(Collectors.toList());
+    }
+
+    /*public boolean validateToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }*/
+
+    public boolean validateToken(String token) {
+        try {
+            Claims claims = extractClaims(token);
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Extract claims (payload) from the JWT token
+    public Claims extractClaims(String token) {
+        return Jwts.parserBuilder()  // Use parserBuilder() as per newer JJWT versions
+                .setSigningKey(secretKey)  // Set the same key to validate the token
+                .build()
+                .parseClaimsJws(token)
+                .getBody();  // Extract and return claims from the JWT
+    }
+}
+

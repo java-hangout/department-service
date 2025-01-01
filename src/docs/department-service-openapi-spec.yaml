@@ -1,0 +1,238 @@
+openapi: 3.0.1
+info:
+  title: Department Management API
+  description: API for managing departments in the system.
+  version: 1.0.0
+tags:
+  - name: "Department Management"
+    description: "Endpoints for managing departments"
+
+paths:
+  /api/departments/create:
+    post:
+      tags:
+        - "Department Management"
+      summary: "Create a new department"
+      description: "Creates a new department in the system."
+      requestBody:
+        description: "Department object that needs to be created."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                departmentName:
+                  type: string
+                  example: "IT Department"
+                description:
+                  type: string
+                  example: "Handles all IT-related tasks."
+                managerId:
+                  type: string
+                  example: "user_001"
+                userIds:
+                  type: array
+                  items:
+                    type: string
+                  example: ["user_002", "user_003"]
+      responses:
+        201:
+          description: "Department created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        400:
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/departments/fetch/all:
+    get:
+      tags:
+        - "Department Management"
+      summary: "Get all departments"
+      description: "Fetches a list of all departments."
+      responses:
+        200:
+          description: "List of all departments"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+        500:
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/departments/fetch/id/{id}:
+    get:
+      tags:
+        - "Department Management"
+      summary: "Get department by ID"
+      description: "Fetches a department by its unique ID."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: "ID of the department"
+      responses:
+        200:
+          description: "Department fetched successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        404:
+          description: "Department not found"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/departments/fetch/name/{departmentName}:
+    get:
+      tags:
+        - "Department Management"
+      summary: "Get department by name"
+      description: "Fetches a department by its name."
+      parameters:
+        - in: path
+          name: departmentName
+          required: true
+          schema:
+            type: string
+          description: "Name of the department"
+      responses:
+        200:
+          description: "Department fetched successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        404:
+          description: "Department not found"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/departments/update/{id}:
+    put:
+      tags:
+        - "Department Management"
+      summary: "Update department by ID"
+      description: "Updates an existing department based on the ID."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: "ID of the department to be updated"
+      requestBody:
+        description: "Department object that contains updated details."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                departmentName:
+                  type: string
+                  example: "Updated IT Department"
+                description:
+                  type: string
+                  example: "Updated department description."
+                managerId:
+                  type: string
+                  example: "user_004"
+                userIds:
+                  type: array
+                  items:
+                    type: string
+                  example: ["user_005", "user_006"]
+      responses:
+        200:
+          description: "Department updated successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        400:
+          description: "Invalid input data"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        404:
+          description: "Department not found"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/departments/delete/{id}:
+    delete:
+      tags:
+        - "Department Management"
+      summary: "Delete department by ID"
+      description: "Deletes a department by its unique ID."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: "ID of the department to be deleted"
+      responses:
+        204:
+          description: "Department deleted successfully"
+        404:
+          description: "Department not found"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    Department:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "dept_001"
+        departmentName:
+          type: string
+          example: "IT Department"
+        description:
+          type: string
+          example: "Handles all IT-related tasks."
+        managerId:
+          type: string
+          example: "user_001"
+        userIds:
+          type: array
+          items:
+            type: string
+          example: ["user_002", "user_003"]
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Department not found"
+        status:
+          type: integer
+          example: 404

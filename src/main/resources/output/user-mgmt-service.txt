@@ -1,0 +1,1112 @@
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\config\DepartmentDBMongoConfig.java ###
+package com.jh.tds.ums.config;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+
+@Configuration
+@EnableMongoRepositories(
+        basePackages = "com.jh.tds.ums.department",  // Specify the package for repository classes
+        mongoTemplateRef = "DepartmentDBMongoConfig"      // Refer to the MongoTemplate bean for Database A
+)
+public class DepartmentDBMongoConfig {
+
+    // Inject the URI for MongoDB Database B from application.properties
+    @Value("${department.spring.data.mongodb.uri}")
+    private String databaseBUri;
+
+    // Bean for MongoTemplate for Database B
+    @Qualifier("DepartmentDBMongoConfig")
+    @Bean(name = "DepartmentDBMongoConfig")
+    public MongoTemplate DepartmentDBMongoConfig() {
+        return new MongoTemplate(new SimpleMongoClientDatabaseFactory(databaseBUri));
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\config\RestTemplateConfig.java ###
+package com.jh.tds.ums.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+@Configuration
+public class RestTemplateConfig {
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();  // Creating RestTemplate bean
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\config\SecurityConfig.java ###
+package com.jh.tds.ums.config;
+
+import com.jh.tds.ums.util.JwtAuthenticationFilter;
+import com.jh.tds.ums.util.JwtUtil;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final JwtUtil jwtUtil;
+
+    public SecurityConfig(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    // Bean for Password Encoder
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // AuthenticationManager bean for authentication
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        return http.getSharedObject(AuthenticationManagerBuilder.class).build();
+    }
+
+    // HTTP security configuration to secure endpoints
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        System.out.println("In side com.kt.ts.userservice.config.SecurityConfig.securityFilterChain " + http);
+        http
+                .csrf(AbstractHttpConfigurer::disable)  // Disable CSRF explicitly in Spring Security 6.x
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/api/users/**").permitAll() // Allow access to authentication routes
+                        .anyRequest().authenticated() // All other requests must be authenticated
+                )
+                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class); // Adding JWT filter before UsernamePasswordAuthenticationFilter
+
+        return http.build();
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\config\SwaggerConfig.java ###
+package com.jh.tds.ums.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SwaggerConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("User Service API")
+                        .version("1.0")
+                        .description("API documentation for the User service"));
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\config\UserMGMTDBMongoConfig.java ###
+package com.jh.tds.ums.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+
+@Configuration
+@EnableMongoRepositories(
+        basePackages = "com.jh.tds.ums.repository",  // Specify the package for repository classes
+        mongoTemplateRef = "UserMGMTDBMongoConfig"      // Refer to the MongoTemplate bean for Database A
+)
+public class UserMGMTDBMongoConfig {
+
+    // Inject the URI for MongoDB Database A from application.properties
+    @Value("${spring.data.mongodb.uri}")
+    private String databaseAUri;
+
+    // Bean for MongoTemplate for Database A
+    @Primary
+    @Bean(name = "UserMGMTDBMongoConfig")
+    public MongoTemplate UserMGMTDBMongoConfig() {
+        return new MongoTemplate(new SimpleMongoClientDatabaseFactory(databaseAUri));
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\controller\AdminController.java ###
+package com.jh.tds.ums.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/admin")
+public class AdminController {
+
+    @GetMapping("/dashboard")
+    public String adminDashboard() {
+        return "Welcome to the Admin Dashboard!";
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\controller\UserController.java ###
+package com.jh.tds.ums.controller;
+
+import com.jh.tds.ums.exception.ErrorResponse;
+import com.jh.tds.ums.model.User;
+import com.jh.tds.ums.service.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/users")
+@Tag(name = "User Management", description = "Endpoints for managing users")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@RequestBody User user) {
+        System.out.println("registerUser --->>>" + user);
+
+        try {
+            User savedUser = userService.registerUser(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+        } catch (RuntimeException e) {
+            // Catch the exception and return the error message dynamically from the service
+            ErrorResponse errorResponse = new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);  // Return error if username already exists
+        }
+    }
+
+    @GetMapping("/fetch/id/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable String id) {
+        User user = userService.getUserById(id);
+        if (user != null) {
+            return ResponseEntity.status(HttpStatus.OK).body(user);  // Return the user if found
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);  // Return NOT_FOUND if user doesn't exist
+        }
+    }
+
+    // Get all departments
+    @GetMapping("/fetch/all")
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> departments = userService.getAllUsers();
+        return ResponseEntity.ok(departments);
+    }
+
+    @GetMapping("/fetch/username/{username}")
+    public ResponseEntity<User> findByUserName(@PathVariable String username) {
+        User user = userService.findByUserName(username);
+        if (user != null) {
+            return ResponseEntity.status(HttpStatus.OK).body(user);  // Return the user if found
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);  // Return NOT_FOUND if user doesn't exist
+        }
+    }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable String id, @RequestBody User user) {
+        user.setId(id);
+        User updatedUser = userService.updateUser(user);
+        return ResponseEntity.status(HttpStatus.OK).body(updatedUser);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteById(@PathVariable String id) {
+        userService.deleteById(id);  // Pass the userId (e.g., user_002) to the service
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();  // Success, 204 No Content
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\department\DepartmentDetailsRepository.java ###
+package com.jh.tds.ums.department;
+
+
+import com.jh.tds.ums.model.Department;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+public interface DepartmentDetailsRepository extends MongoRepository<Department, String> {
+    Department findByDepartmentName(String departmentName);
+
+    // Custom query to check if a department with a name already exists
+    boolean existsByDepartmentName(String departmentName);
+
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\exception\DepartmentNotFoundException.java ###
+package com.jh.tds.ums.exception;
+
+public class DepartmentNotFoundException extends RuntimeException {
+
+    public DepartmentNotFoundException(String message) {
+        super(message);
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\exception\DownStreamSystemNotAvailableException.java ###
+package com.jh.tds.ums.exception;
+
+public class DownStreamSystemNotAvailableException extends RuntimeException {
+
+    public DownStreamSystemNotAvailableException(String message) {
+        super(message);
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\exception\DuplicateUserNameException.java ###
+package com.jh.tds.ums.exception;
+
+public class DuplicateUserNameException extends RuntimeException {
+
+    public DuplicateUserNameException(String user) {
+        super("Username '" + user + "' already exists.");
+
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\exception\ErrorResponse.java ###
+package com.jh.tds.ums.exception;
+
+public class ErrorResponse {
+    private String message;
+    private int status;
+
+    // Constructor
+    public ErrorResponse(String message, int status) {
+        this.message = message;
+        this.status = status;
+    }
+
+    // Getters and setters
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\exception\GlobalExceptionHandler.java ###
+package com.jh.tds.ums.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    // Handle DuplicateUserNameException
+    @ExceptionHandler(DuplicateUserNameException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateUserName(DuplicateUserNameException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    // Handle other exceptions
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        // Handle any other generic exceptions
+        ErrorResponse errorResponse = new ErrorResponse("An unexpected error occurred.", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+    @ExceptionHandler(DownStreamSystemNotAvailableException.class)
+    public ResponseEntity<ErrorResponse> handleDownStreamNotAvailable(DownStreamSystemNotAvailableException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.SERVICE_UNAVAILABLE.value());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
+    }
+    @ExceptionHandler(DepartmentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDepartmentNotFound(DepartmentNotFoundException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\exception\ManagerAlreadyExistException.java ###
+package com.jh.tds.ums.exception;
+
+public class ManagerAlreadyExistException extends RuntimeException {
+
+    public ManagerAlreadyExistException(String message) {
+        super(message);
+
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\exception\UserNotFoundException.java ###
+package com.jh.tds.ums.exception;
+
+public class UserNotFoundException extends RuntimeException {
+    public UserNotFoundException(String userId) {
+        super("User with ID " + userId + " not found");
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\model\Department.java ###
+package com.jh.tds.ums.model;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.List;
+
+@Setter
+@Getter
+@Document(collection = "departments")
+public class Department {
+
+    @Id
+    private String id;                     // Unique department ID
+    @Indexed(unique = true)
+    private String departmentName;                   // Name of the department
+    private String description;            // Description of the department
+    private String managerId;              // Reference to the manager (One-to-One, Manager of the department)
+    private List<String> userIds;          // List of user IDs who are part of the department (Many-to-One)
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getDepartmentName() {
+        return departmentName;
+    }
+
+    public void setDepartmentName(String departmentName) {
+        this.departmentName = departmentName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getManagerId() {
+        return managerId;
+    }
+
+    public void setManagerId(String managerId) {
+        this.managerId = managerId;
+    }
+
+    public List<String> getUserIds() {
+        return userIds;
+    }
+
+    public void setUserIds(List<String> userIds) {
+        this.userIds = userIds;
+    }
+}
+
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\model\Sequence.java ###
+package com.jh.tds.ums.model;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "sequence")
+public class Sequence {
+    
+    @Id
+    private String id;  // This will store the collection name (for generality).
+    private int seq;    // This will store the current sequence value.
+
+    // Getter and Setter methods
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public int getSeq() {
+        return seq;
+    }
+
+    public void setSeq(int seq) {
+        this.seq = seq;
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\model\User.java ###
+package com.jh.tds.ums.model;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
+
+import java.util.Date;
+@Getter
+@Setter
+@Document(collection = "users")
+public class User {
+
+    @Id
+    private String id;
+    @Indexed(unique = true) // Unique user ID
+    private String userName;            // Unique username for login
+    private String password;        // Hashed password for authentication
+    private String emailId;               // User's email address
+    private String firstName;           // First name of the user
+    private String lastName;            // Last name of the user
+    private String role;                //role - USER and Manager
+    private String status;              // Status of the user (ACTIVE, INACTIVE)
+    private String departmentId;        // Reference to the department the user belongs to (Many-to-One)
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getEmailId() {
+        return emailId;
+    }
+
+    public void setEmailId(String emailId) {
+        this.emailId = emailId;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(String departmentId) {
+        this.departmentId = departmentId;
+    }
+}
+
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\repository\SequenceRepository.java ###
+package com.jh.tds.ums.repository;
+
+import com.jh.tds.ums.model.Sequence;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface SequenceRepository extends MongoRepository<Sequence, String> {
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\repository\UserRepository.java ###
+package com.jh.tds.ums.repository;
+
+
+import com.jh.tds.ums.model.User;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+public interface UserRepository extends MongoRepository<User, String> {
+    User findByUserName(String userName);
+    User findByEmailId(String emailId);
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\service\SequenceGeneratorService.java ###
+package com.jh.tds.ums.service;
+
+import com.jh.tds.ums.model.Sequence;
+import com.jh.tds.ums.repository.SequenceRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class SequenceGeneratorService {
+
+    @Autowired
+    private SequenceRepository sequenceRepository;
+
+    private static final String SEQUENCE_NAME = "user_sequence";
+
+    public String generateUserId() {
+        // Retrieve the current sequence or create a new one if it doesn't exist
+        Sequence sequence = sequenceRepository.findById(SEQUENCE_NAME)
+                .orElseGet(this::createNewSequence);
+
+        // Generate the user ID based on the current sequence
+        int currentSeq = sequence.getSeq();
+
+        // Generate the user ID (starting from user_001, user_002, etc.)
+        String generatedId = String.format("user_%04d", currentSeq);
+
+        // Increment the sequence counter for future users
+        sequence.setSeq(currentSeq + 1);
+
+        // Save the updated sequence value to the database
+        sequenceRepository.save(sequence);
+
+        // Return the generated user ID
+        return generatedId;
+    }
+
+    private Sequence createNewSequence() {
+        Sequence sequence = new Sequence();
+        sequence.setId(SEQUENCE_NAME);
+        sequence.setSeq(1);  // Start from user_001
+        return sequenceRepository.save(sequence);
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\service\UserService.java ###
+package com.jh.tds.ums.service;
+
+import com.jh.tds.ums.model.User;
+
+import java.util.List;
+
+/**
+ * @author Veeresh N
+ * @version 1.0
+ */
+public interface UserService {
+    public User registerUser(User user);
+    public User getUserById(String id);
+    public User updateUser(User user);
+    public void deleteById(String id);
+    public User findByUserName(String userName);
+    public List<User> getAllUsers();
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\service\UserServiceImpl.java ###
+package com.jh.tds.ums.service;
+
+
+import com.jh.tds.ums.exception.*;
+import com.jh.tds.ums.model.Department;
+import com.jh.tds.ums.model.User;
+import com.jh.tds.ums.repository.UserRepository;
+import com.jh.tds.ums.department.DepartmentDetailsRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private SequenceGeneratorService sequenceGeneratorService;
+
+    @Autowired
+    DepartmentDetailsRepository departmentRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;  // RestTemplate for communication with Department Service
+
+    @Value("${department.service.base.url}")  // URL for Department Service
+    private String departmentServiceUrl;
+
+    @Override
+    public User registerUser(User user) {
+        //user.setPassword(PWHashingUtil.hashPassword(user.getPassword()));
+        Department department = checkDepartmentExists(user);
+        User existingUser = userRepository.findByUserName(user.getUserName());
+        // Check if user with the same name already exists
+        if (existingUser != null) {
+            // Throw an exception with a dynamic message
+            throw new DuplicateUserNameException(user.getUserName());
+        }
+        // Generate a unique ID for the user
+        String userId = sequenceGeneratorService.generateUserId();
+        user.setId(userId);  // Set the generated ID
+        User user1 = userRepository.save(user);
+        updateDepartmentWithUserDetails(user1, department);
+        return user1;
+    }
+
+    @Override
+    public User getUserById(String id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    public User updateUser(User user) {
+        return userRepository.save(user);
+
+    }
+
+    @Override
+    public void deleteById(String userId) {
+        Optional<User> userOptional = userRepository.findById(userId);  // Find user by ID (user_001, user_002, etc.)
+        if (userOptional.isPresent()) {
+            userRepository.delete(userOptional.get());  // Delete the user if found
+        } else {
+            throw new UserNotFoundException(userId);  // Handle if user not found
+        }
+    }
+
+    @Override
+    public User findByUserName(String userName) {
+        return userRepository.findByUserName(userName);
+    }
+
+    // Method to get all departments
+    @Override
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    private Department checkDepartmentExists(User user) throws DepartmentNotFoundException {
+        // Build the URL for the Department Service API to check if the department exists
+        String departmentFindUrl = departmentServiceUrl + "/api/departments/" + user.getDepartmentId();
+        System.out.println("department Find Url : "+departmentFindUrl);
+
+        try {
+            // Make a GET request to check if the department exists
+            Optional<Department> department = departmentRepository.findById(user.getDepartmentId());
+            System.out.println("department : "+department);
+            if (department.isEmpty()) {
+                // If the department doesn't exist, throw an exception
+                throw new DepartmentNotFoundException("Department with ID " + user.getDepartmentId() + " not found.");
+            }
+            return department.get();
+        } catch (Exception e) {
+            // Handle potential errors such as network issues or unexpected failures
+            System.out.println("Error occurred while checking the department details : " + e.getMessage());
+            throw new DownStreamSystemNotAvailableException("Error occurred while checking the department details");
+        }
+    }
+
+    private void updateDepartmentWithUserDetails(User user, Department department) throws ManagerAlreadyExistException {
+        // Handle the case based on the user's role
+        if ("USER".equalsIgnoreCase(user.getRole())) {
+            System.out.println("user.getRole(): "+user.getRole());
+            // Add the user ID to the department
+            department.getUserIds().add(user.getId());
+            System.out.println(" department.getUserIds(): "+ department.getUserIds());
+        } else if ("MANAGER".equalsIgnoreCase(user.getRole())) {
+            System.out.println("MANAGER--->"+"user.getRole(): "+user.getRole());
+            // Check if a manager already exists in the department
+            String managerId = department.getManagerId();
+            // Debugging: print the value of managerId
+            System.out.println("Manager ID: '" + managerId + "'");
+            if (managerId == null || managerId.trim().isEmpty()) {
+                // Update the manager ID
+                department.setManagerId(user.getId());
+            } else {
+                // If a manager already exists, throw an exception
+                String message = "Manager already exists in the Department. Department Id: " + user.getDepartmentId() + " and Manager Id: " + managerId;
+                System.out.println("Error: " + message);
+                throw new ManagerAlreadyExistException(message);
+            }
+        }
+        // After making changes, update the department
+        departmentRepository.save(department);
+        System.out.println("Department updated successfully.");
+    }
+
+
+    /*private Department checkDepartmentExists(User user) throws DepartmentNotFoundException {
+        // Build the URL for the Department Service API to check if the department exists
+        String departmentFindUrl = departmentServiceUrl + "/api/departments/" + user.getDepartmentId();
+        System.out.println("department Find Url : "+departmentFindUrl);
+
+        try {
+            // Make a GET request to check if the department exists
+            Department department = restTemplate.getForObject(departmentFindUrl, Department.class);
+            System.out.println("department : "+department);
+            if (department == null) {
+                // If the department doesn't exist, throw an exception
+                throw new DepartmentNotFoundException("Department with ID " + user.getDepartmentId() + " not found.");
+            }
+            return department;
+        } catch (Exception e) {
+            // Handle potential errors such as network issues or unexpected failures
+            System.out.println("Error occurred while checking the department details : " + e.getMessage());
+            throw new DownStreamSystemNotAvailableException("Error occurred while checking the department details");
+        }
+    }
+
+    private void updateDepartmentWithUserDetails(User user, Department department) throws ManagerAlreadyExistException {
+        // Handle the case based on the user's role
+        if ("USER".equalsIgnoreCase(user.getRole())) {
+            System.out.println("user.getRole(): "+user.getRole());
+            // Add the user ID to the department
+            department.getUserIds().add(user.getId());
+            System.out.println(" department.getUserIds(): "+ department.getUserIds());
+        } else if ("MANAGER".equalsIgnoreCase(user.getRole())) {
+            System.out.println("MANAGER--->"+"user.getRole(): "+user.getRole());
+            // Check if a manager already exists in the department
+            String managerId = department.getManagerId();
+            // Debugging: print the value of managerId
+            System.out.println("Manager ID: '" + managerId + "'");
+            if (managerId == null || managerId.trim().isEmpty()) {
+                // Update the manager ID
+                department.setManagerId(user.getId());
+            } else {
+                // If a manager already exists, throw an exception
+                String message = "Manager already exists in the Department. Department Id: " + user.getDepartmentId() + " and Manager Id: " + managerId;
+                System.out.println("Error: " + message);
+                throw new ManagerAlreadyExistException(message);
+            }
+        }
+        // After making changes, update the department
+        String departmentUpdateUrl = departmentServiceUrl + "/api/departments/update/" + user.getDepartmentId();
+        System.out.println("departmentUpdateUrl : "+departmentUpdateUrl);
+        restTemplate.put(departmentUpdateUrl, department, Void.class);
+        System.out.println("Department updated successfully.");
+    }
+*/
+
+
+    /*private void updateDepartmentWithUser(User user) {
+        // Build the URL for the Department Service API
+        String departmentFindUrl = departmentServiceUrl + "/api/departments/" + user.getDepartmentId();
+        String departmentUpdateUrl = departmentServiceUrl + "/api/departments/update/" + user.getDepartmentId();
+
+
+        try {
+            // Make a GET request to check if the department exists
+            Department department = restTemplate.getForObject(departmentFindUrl, Department.class);
+
+            if (department == null) {
+                // If the department doesn't exist, return an error message or throw an exception
+                System.out.println("Error: Department with ID " + user.getDepartmentId() + " not found.");
+                // Optionally, throw a custom exception if you prefer
+                 throw new DepartmentNotFoundException(user.getDepartmentId());
+            } else {
+                if("USER".equalsIgnoreCase(user.getRole())) {
+                    department.getUserIds().add(user.getId());
+                }else if("MANAGER".equalsIgnoreCase(user.getRole())) {
+                    String managerId = department.getManagerId();
+                    if(!managerId.isBlank()){
+                        department.setManagerId(user.getId());
+                    }else{
+                        String message = "Manger already exist in the Department. Department Id :  " + user.getDepartmentId() + " and Manager Id : "+department.getManagerId();
+                        System.out.println("Error: "+message);
+                        throw new ManagerAlreadyExistException(message);
+                    }
+                }
+                // If the department exists, update it with the user
+                restTemplate.postForObject(departmentUpdateUrl, user, Void.class);
+                System.out.println("Department updated successfully.");
+            }
+        } catch (Exception e) {
+            // Handle potential errors such as network issues or unexpected failures
+            System.out.println("Error occurred while checking the department: " + e.getMessage());
+        }
+    }*/
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\UserMgmtServiceApplication.java ###
+package com.jh.tds.ums;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+public class UserMgmtServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(UserMgmtServiceApplication.class, args);
+	}
+
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\util\JwtAuthenticationFilter.java ###
+package com.jh.tds.ums.util;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+        System.out.println("user service ===>>>> Processing request for path: " + path);
+
+        if (shouldNotFilter(request)) {
+            System.out.println("Skipping filter for path: " + path);
+            filterChain.doFilter(request, response);
+            return;
+        }
+        /*String token = request.getHeader("Authorization");
+        System.out.println("token --->>> " + token);
+        if (token != null && token.startsWith("Bearer ")) {
+            System.out.println("token --->>> 222 " + token);
+//            token = token.substring(7); // Remove "Bearer " prefix
+            token = token.split(" ")[1].trim();*/
+        String token = extractToken(request);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // Unauthorized response for invalid token
+            response.getWriter().write("Invalid or missing token");
+            return;
+        }
+//        if (token != null && jwtUtil.validateToken(token)) {
+            String username = jwtUtil.extractUsername(token);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var authentication = new UsernamePasswordAuthenticationToken(username, null, jwtUtil.extractRoles(token));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+            /*String[] roles = jwtUtil.extractRoles(token);  // Extract roles from the token
+
+//            if (username != null && jwtUtil.validateToken(token, username)) {
+//            if (token != null && jwtUtil.validateToken(token)) {
+                // Create authentication token and set it in SecurityContext
+                *//*UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        username, null, new ArrayList<>()
+                );*//*
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        username, null, jwtUtil.getAuthoritiesFromRoles(roles)
+                );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);*/
+//        }
+//        }
+
+        filterChain.doFilter(request, response);  // Proceed to the next filter in the chain
+    }
+    // Extract token from Authorization header
+    private String extractToken(HttpServletRequest request) {
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (header != null && header.startsWith("Bearer ")) {
+//            return header.substring(7);  // Remove "Bearer " prefix
+//            return header.substring(7).trim();
+            return header.split(" ")[1].trim();
+        }
+        return null;
+    }
+    // Check if the request should bypass JWT validation
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        // Exclude /api/users/register from JWT validation
+        return path.equals("/api/users/register");
+    }
+}
+
+### Contents of D:\OSBI\workspace\user-mgmt-service\src\main\java\com\jh\tds\ums\util\JwtUtil.java ###
+package com.jh.tds.ums.util;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Component;
+
+import java.security.Key;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Component
+public class JwtUtil {
+    //    @Value("${jwt.secret}")
+    private String SECRET_KEY = "sh2+3JRuzIaVMCGxBPeDMSzUFwDBLscv4R77LYntGns=";
+    private Key secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(SECRET_KEY));
+    // Secure key for HS256 algorithm using JJWT's Keys utility (recommended approach)
+//    private Key secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256); // Generates a secure key for HS256
+//private Key secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+    private long expirationTime = 1000 * 60 * 60; // 1 hour in milliseconds
+
+    // Generate a JWT token with the given username
+    public String generateToken(String username, List<SimpleGrantedAuthority> authorities) {
+        System.out.println("generateToken --->>> " + username);
+//        System.out.println("SECRET_KEY --->>> " + SECRET_KEY);
+        System.out.println("secretKey --->>> " + secretKey);
+        Claims claims = Jwts.claims().setSubject(username);
+        claims.put("roles", authorities.stream().map(SimpleGrantedAuthority::getAuthority).collect(Collectors.toList()));
+        return Jwts.builder()
+                .setClaims(claims)
+//                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(secretKey)  // Use the generated secure key to sign the token
+                .compact();
+    }
+
+
+
+    // Extract the username (subject) from the JWT token
+    public String extractUsername(String token) {
+        return extractClaims(token).getSubject(); // The subject is typically the username
+    }
+
+    /*public String[] extractRoles(String token) {
+        Claims claims = extractClaims(token);
+        List<String> roles = (List<String>) claims.get("roles");
+        return roles.toArray(new String[0]);
+    }*/
+    public List<SimpleGrantedAuthority> extractRoles(String token) {
+        Claims claims = extractClaims(token);
+        List<String> roles = (List<String>) claims.get("roles");
+        return roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+    }
+    // Check if the token is expired
+    public boolean isTokenExpired(String token) {
+        return extractClaims(token).getExpiration().before(new Date());  // Compare token expiration with current time
+    }
+
+    /*// Validate the JWT token by comparing username and expiration status
+    public boolean validateToken(String token, String username) {
+        return (username.equals(extractUsername(token)) && !isTokenExpired(token));  // Ensure the username matches and token isn't expired
+    }*/
+    public List<SimpleGrantedAuthority> getAuthoritiesFromRoles(String[] roles) {
+        return Arrays.stream(roles)
+                .map(role -> new SimpleGrantedAuthority(role))
+                .collect(Collectors.toList());
+    }
+
+    /*public boolean validateToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }*/
+
+    public boolean validateToken(String token) {
+        try {
+            Claims claims = extractClaims(token);
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Extract claims (payload) from the JWT token
+    public Claims extractClaims(String token) {
+        return Jwts.parserBuilder()  // Use parserBuilder() as per newer JJWT versions
+                .setSigningKey(secretKey)  // Set the same key to validate the token
+                .build()
+                .parseClaimsJws(token)
+                .getBody();  // Extract and return claims from the JWT
+    }
+}
+
