@@ -8,10 +8,10 @@ public class JavaFilesToTextWithSubfolders {
     }
     public static void fileWriter(String[] args) {
         // Folder containing .java files (can include subfolders)
-        String folderPath = "D:\\OSBI\\workspace\\user-mgmt-service\\src\\main\\java\\com\\jh\\tds\\ums";  // Change this to the folder path containing .java files
+        String folderPath = "D:\\OSBI\\workspaceui\\task-display-system-ui\\src";  // Change this to the folder path containing .java files
         
         // Output file where the content of all .java files will be written
-        String outputFile = "D:\\OSBI\\workspace\\department-service\\src\\main\\resources\\output\\user-mgmt-service.txt";  // Change this to your desired output file
+        String outputFile = "D:\\OSBI\\workspace\\department-service\\src\\main\\resources\\output\\task-display-system-ui_src.txt";  // Change this to your desired output file
         
         try {
             writeJavaFilesFromSubfoldersToSingleFile(folderPath, outputFile);
