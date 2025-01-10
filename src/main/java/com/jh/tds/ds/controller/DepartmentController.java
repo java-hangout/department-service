@@ -13,6 +13,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/departments")
+@CrossOrigin(origins = "http://localhost:3000")
 @Tag(name = "Department Management", description = "Endpoints for managing departments")
 public class DepartmentController {
 
