@@ -9,11 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/departments")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000,http://localhost:3001,http://172.19.10.137:3000") // Allow only your frontend URL
 @Tag(name = "Department Management", description = "Endpoints for managing departments")
 public class DepartmentController {
 
