@@ -20,6 +20,9 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Autowired
     private SequenceGeneratorService sequenceService;  // Inject SequenceService
 
+    @Autowired
+    private DeptAuditLogService auditLogService;
+
 
     // Method to create a new department
     @Override
@@ -72,19 +75,27 @@ public class DepartmentServiceImpl implements DepartmentService {
     // Method to update a department by ID
     @Override
     public Department updateDepartment(String id, Department department) {
-        if (departmentRepository.existsById(id)) {
+        Department updatedDept = null;
+        Optional<Department> existingDept = departmentRepository.findById(id);
+//        if (departmentRepository.existsById(id)) {
+        if (existingDept.isPresent()) {
             department.setId(id);
-            return departmentRepository.save(department);
+            updatedDept = departmentRepository.save(department);
+            auditLogService.logChangesForAudit(existingDept.get(),"Update");
         } else {
             throw new DepartmentNotFoundException(id);
         }
+        return updatedDept;
     }
 
     // Method to delete a department by ID
     @Override
     public void deleteDepartment(String id) {
-        if (departmentRepository.existsById(id)) {
+//        if (departmentRepository.existsById(id)) {
+        Optional<Department> existingDept = departmentRepository.findById(id);
+        if (existingDept.isPresent()) {
             departmentRepository.deleteById(id);
+            auditLogService.logChangesForAudit(existingDept.get(),"Delete");
         } else {
             throw new DepartmentNotFoundException(id);
         }
