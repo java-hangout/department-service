@@ -1,4 +1,4 @@
-package com.jh.tds.ds.registry;
+package com.jh.tds.ds.repository;
 
 import com.jh.tds.ds.model.DeptAuditLog;
 import org.springframework.data.mongodb.repository.MongoRepository;

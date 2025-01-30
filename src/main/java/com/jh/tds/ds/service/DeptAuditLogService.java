@@ -3,7 +3,7 @@ package com.jh.tds.ds.service;
 
 import com.jh.tds.ds.model.DeptAuditLog;
 import com.jh.tds.ds.model.Department;
-import com.jh.tds.ds.registry.DeptAuditLogRepository;
+import com.jh.tds.ds.repository.DeptAuditLogRepository;
 import com.jh.tds.ds.util.DeptAuditLogUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

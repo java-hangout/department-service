@@ -7,14 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class SequenceGeneratorService {
+public class BUSequenceGeneratorService {
 
     @Autowired
     private SequenceRepository sequenceRepository;
 
-    private static final String SEQUENCE_NAME = "department_seq";
+    private static final String SEQUENCE_NAME = "businessunit_seq";
 
-    public String generateDepartmentId() {
+    public String generateBusinessUnitId() {
         // Retrieve the current sequence or create a new one if it doesn't exist
         Sequence sequence = sequenceRepository.findById(SEQUENCE_NAME)
                 .orElseGet(this::createNewSequence);
@@ -23,7 +23,7 @@ public class SequenceGeneratorService {
         int currentSeq = sequence.getSeqValue();
 
         // Generate the user ID (starting from user_001, user_002, etc.)
-        String generatedId = String.format("dept_%03d", currentSeq);
+        String generatedId = String.format("bu_%03d", currentSeq);
 
         // Increment the sequence counter for future users
         sequence.setSeqValue(currentSeq + 1);

@@ -2,12 +2,14 @@ package com.jh.tds.ds.service;
 
 import com.jh.tds.ds.exception.DepartmentNotFoundException;
 import com.jh.tds.ds.exception.DuplicateDepartmentNameException;
+import com.jh.tds.ds.model.BusinessUnit;
 import com.jh.tds.ds.model.Department;
-import com.jh.tds.ds.registry.DepartmentRepository;
+import com.jh.tds.ds.repository.DepartmentRepository;
 import com.mongodb.DuplicateKeyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +25,9 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Autowired
     private DeptAuditLogService auditLogService;
 
+    @Autowired
+    private BusinessUnitService businessUnitService;
+
 
     // Method to create a new department
     @Override
@@ -35,6 +40,21 @@ public class DepartmentServiceImpl implements DepartmentService {
             // Generate a new department ID using the sequence service
             String departmentId = sequenceService.generateDepartmentId();
             department.setId(departmentId);
+            department.setCreatedDate(new Date());
+            department.setUpdatedDate(new Date());
+            if (department.isParentDepartment()){
+                Optional<BusinessUnit> businessUnitOptional = businessUnitService.findById(department.getBusinessUnitId());
+                if(businessUnitOptional.isPresent()){
+                    BusinessUnit businessUnit = businessUnitOptional.get();
+                    businessUnit.getDepartmentIds().add(departmentId);
+                }
+            }else if(!department.isParentDepartment() && department.getParentDepartmentId() != null){
+                Optional<Department> departmentOptional = departmentRepository.findById(department.getParentDepartmentId());
+                if(departmentOptional.isPresent()){
+                    Department department1 = departmentOptional.get();
+                    department1.getSubDepartmentIds().add(departmentId);
+                }
+            }
 //            return departmentRepository.save(department);
             // Attempt to save the department with the given departmentName
             return departmentRepository.save(department);
