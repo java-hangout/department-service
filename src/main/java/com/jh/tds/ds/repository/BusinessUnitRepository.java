@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BusinessUnitRepository extends MongoRepository<BusinessUnit, String> {
-    // Custom queries can be added here if necessary
+    // Custom queries can be added here if necessary --
 }
