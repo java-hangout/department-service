@@ -15,19 +15,22 @@ import java.util.List;
 @Getter
 @Document(collection = "departments")
 public class Department {
-    private String businessUnitId;
+
     @Id
     private String id;                     // Unique department ID
     @Indexed(unique = true)
     private String departmentName;                   // Name of the department
     private String description;            // Description of the department
     private List<String> userIds;          // List of user IDs who are part of the department (Many-to-One)    private String businessUnitId;
+    private String businessUnitId;
+    private String businessUnitName;
     private String parentDepartmentId;
+    private boolean parentDeptFlag;    // Flag indicating if this department is a parent department (true/false)
     private List<String> subDepartmentIds;//ist of sub-departments under this department
     @CreatedDate
     private Date createdDate;  // Stores the date when the record was created
     @LastModifiedDate
     private Date updatedDate;
-    private boolean isParentDepartment;    // Flag indicating if this department is a parent department (true/false)
+
 }
 

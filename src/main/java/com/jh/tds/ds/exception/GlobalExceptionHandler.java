@@ -22,6 +22,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
+    @ExceptionHandler(DuplicateBusinessUnitNameException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateBusinessUnitName(DuplicateBusinessUnitNameException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(BusinessUnitNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessUnitNotFound(BusinessUnitNotFoundException ex) {
+        // Create a structured error response using the ErrorResponse class
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
     // Handle other exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {

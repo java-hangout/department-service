@@ -11,68 +11,45 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/businessunits")
+@CrossOrigin(origins = "http://localhost:3000,http://localhost:3001,http://172.19.10.137:3000")
 public class BusinessUnitController {
 
     @Autowired
     private BusinessUnitService businessUnitService;
 
-    /**
-     * Create a new Business Unit
-     */
     @PostMapping("/create")
     public ResponseEntity<BusinessUnit> createBusinessUnit(@RequestBody BusinessUnit businessUnit) {
-        BusinessUnit savedBusinessUnit = businessUnitService.save(businessUnit);
+        BusinessUnit savedBusinessUnit = businessUnitService.createBusinessUnit(businessUnit);
         return ResponseEntity.ok(savedBusinessUnit);
     }
 
-    /**
-     * Get all Business Units
-     */
     @GetMapping("/fetch/all")
     public ResponseEntity<List<BusinessUnit>> getAllBusinessUnits() {
         List<BusinessUnit> businessUnits = businessUnitService.findAll();
         return ResponseEntity.ok(businessUnits);
     }
 
-    /**
-     * Get a Business Unit by ID
-     */
-    @GetMapping("/{id}")
+    @GetMapping("/fetch/id/{id}")
     public ResponseEntity<BusinessUnit> getBusinessUnitById(@PathVariable String id) {
         Optional<BusinessUnit> businessUnit = businessUnitService.findById(id);
-        if (businessUnit.isPresent()) {
-            return ResponseEntity.ok(businessUnit.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return businessUnit.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /**
-     * Update a Business Unit
-     */
-    @PutMapping("/{id}")
+    @GetMapping("/fetch/name/{businessUnit}")
+    public ResponseEntity<BusinessUnit> getBusinessUnitByName(@PathVariable String businessUnitName) {
+        Optional<BusinessUnit> businessUnit = businessUnitService.findByBusinessUnit(businessUnitName);
+        return businessUnit.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/update/{id}")
     public ResponseEntity<BusinessUnit> updateBusinessUnit(@PathVariable String id, @RequestBody BusinessUnit businessUnit) {
-        Optional<BusinessUnit> existingBusinessUnit = businessUnitService.findById(id);
-        if (existingBusinessUnit.isPresent()) {
-            businessUnit.setId(id); // Update the ID
-            BusinessUnit updatedBusinessUnit = businessUnitService.save(businessUnit);
-            return ResponseEntity.ok(updatedBusinessUnit);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        BusinessUnit UpdatedBusinessUnit = businessUnitService.updateBusinessUnit(id, businessUnit);
+        return ResponseEntity.ok(UpdatedBusinessUnit);
     }
 
-    /**
-     * Delete a Business Unit
-     */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/delete/{id}")
     public ResponseEntity<Void> deleteBusinessUnit(@PathVariable String id) {
-        Optional<BusinessUnit> existingBusinessUnit = businessUnitService.findById(id);
-        if (existingBusinessUnit.isPresent()) {
             businessUnitService.deleteById(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+            return ResponseEntity.noContent().build();
     }
 }

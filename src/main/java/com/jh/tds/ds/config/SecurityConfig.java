@@ -43,8 +43,8 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)  // Disable CSRF explicitly in Spring Security 6.x
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/departments/**").permitAll()
-                        .requestMatchers("/api/businessunits/**").permitAll()// Allow access to authentication routes
+                        .requestMatchers("/api/departments/**").permitAll() // Allow access to authentication routes
+                        .requestMatchers("/api/businessunits/**").permitAll()
                         .anyRequest().authenticated() // All other requests must be authenticated
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class); // Adding JWT filter before UsernamePasswordAuthenticationFilter

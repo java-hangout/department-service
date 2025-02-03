@@ -20,4 +20,5 @@ public interface DepartmentService {
     public Department updateDepartment(String id, Department department);
 
     public void deleteDepartment(String id);
+    public List<Department> getDepartmentsByBusinessUnitId(String businessUnitId);
 }

@@ -1,9 +1,11 @@
 package com.jh.tds.ds.service;
 
+import com.jh.tds.ds.exception.BusinessUnitNotFoundException;
 import com.jh.tds.ds.exception.DepartmentNotFoundException;
 import com.jh.tds.ds.exception.DuplicateDepartmentNameException;
 import com.jh.tds.ds.model.BusinessUnit;
 import com.jh.tds.ds.model.Department;
+import com.jh.tds.ds.repository.BusinessUnitRepository;
 import com.jh.tds.ds.repository.DepartmentRepository;
 import com.mongodb.DuplicateKeyException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Autowired
     private BusinessUnitService businessUnitService;
 
+    @Autowired
+    private BusinessUnitRepository businessUnitRepository;
+
 
     // Method to create a new department
     @Override
@@ -39,20 +44,38 @@ public class DepartmentServiceImpl implements DepartmentService {
             }
             // Generate a new department ID using the sequence service
             String departmentId = sequenceService.generateDepartmentId();
+            System.out.println("departmentId : " + departmentId);
             department.setId(departmentId);
             department.setCreatedDate(new Date());
             department.setUpdatedDate(new Date());
-            if (department.isParentDepartment()){
-                Optional<BusinessUnit> businessUnitOptional = businessUnitService.findById(department.getBusinessUnitId());
+            System.out.println("department.isParentDepartment() : " + department.isParentDeptFlag());
+            System.out.println("department.getParentDepartmentId() : " + department.getParentDepartmentId());
+            String buID = department.getBusinessUnitId();
+            Optional<BusinessUnit> businessUnitOptional = businessUnitService.findById(buID);
+            System.out.println("businessUnitOptional : " + businessUnitOptional);
+            BusinessUnit businessUnit = null;
                 if(businessUnitOptional.isPresent()){
-                    BusinessUnit businessUnit = businessUnitOptional.get();
-                    businessUnit.getDepartmentIds().add(departmentId);
+                    businessUnit = businessUnitOptional.get();
+                    department.setBusinessUnitName(businessUnit.getBusinessUnitName());
+                } else {
+                    throw new BusinessUnitNotFoundException(buID);
                 }
-            }else if(!department.isParentDepartment() && department.getParentDepartmentId() != null){
-                Optional<Department> departmentOptional = departmentRepository.findById(department.getParentDepartmentId());
+            if (department.isParentDeptFlag()) {
+                businessUnit.getDepartmentIds().add(departmentId);
+                businessUnitRepository.save(businessUnit);
+            } else if (department.getParentDepartmentId() != null) {
+                String parentId = department.getParentDepartmentId();
+                Optional<Department> departmentOptional = departmentRepository.findById(parentId);
+                System.out.println("departmentOptional : " + departmentOptional);
                 if(departmentOptional.isPresent()){
+                    System.out.println("inside is Present....!!");
                     Department department1 = departmentOptional.get();
+                    System.out.println("department1.getSubDepartmentIds before : " + department1.getSubDepartmentIds());
                     department1.getSubDepartmentIds().add(departmentId);
+                    System.out.println("department1.getSubDepartmentIds after : " + department1.getSubDepartmentIds());
+                    departmentRepository.save(department1);
+                } else {
+                    throw new DepartmentNotFoundException(parentId);
                 }
             }
 //            return departmentRepository.save(department);
@@ -89,6 +112,16 @@ public class DepartmentServiceImpl implements DepartmentService {
             return department.get();
         } else {
             throw new DepartmentNotFoundException(departmentName);
+        }
+    }
+
+    @Override
+    public List<Department> getDepartmentsByBusinessUnitId(String businessUnitId) {
+        Optional<List<Department>> department = departmentRepository.findByBusinessUnitId(businessUnitId);
+        if (department.isPresent()) {
+            return department.get();
+        } else {
+            throw new DepartmentNotFoundException(businessUnitId);
         }
     }
 

@@ -45,6 +45,11 @@ public class DepartmentController {
         Department department = departmentService.getDepartmentByName(departmentName);
         return ResponseEntity.ok(department);
     }
+    @GetMapping("/fetch/bu/{businessUnitId}")
+    public ResponseEntity<List<Department> > getDepartmentsByBU(@PathVariable String businessUnitId) {
+        List<Department>  department = departmentService.getDepartmentsByBusinessUnitId(businessUnitId);
+        return ResponseEntity.ok(department);
+    }
 
     // Update a department by ID
     @PutMapping("/update/{id}")
